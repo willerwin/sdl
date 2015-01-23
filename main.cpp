@@ -46,9 +46,10 @@ SDL_Window* fg_pWindow = NULL;
 //The window renderer
 SDL_Renderer* fg_pRenderer = NULL;
 
-//Scene sprites
-CTexture fg_ModulatedTexture;
-CTexture fg_BackgroundTexture;
+//Walking animation
+const int fg_iWalkingAnimationFrames_c = 4;
+SDL_Rect fg_aSpriteClips[fg_iWalkingAnimationFrames_c];
+CTexture fg_SpriteSheetTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -84,7 +85,7 @@ int main( int argc, char* args[] )
    // Event handler
    SDL_Event uEvent;
 
-   Uint8 iA = 255;
+   int iFrame = 0;
 
    //While application is running
    while (!bQuit)
@@ -97,35 +98,21 @@ int main( int argc, char* args[] )
          {
             bQuit = true;
          }
-         else if(uEvent.type == SDL_KEYDOWN)
-         {
-            if (uEvent.key.keysym.sym == SDLK_w)
-            {
-               if (iA + 32 > 255)
-                  iA = 255;
-               else
-                  iA += 32;
-            }
-            else if (uEvent.key.keysym.sym == SDLK_s)
-            {
-               if (iA - 32 < 0)
-                  iA = 0;
-               else
-                  iA -= 32;
-            }
-         }
 
          //Clear screen
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_BackgroundTexture.Render(0, 0, NULL);
-
-         fg_ModulatedTexture.SetAlpha(iA);
-         fg_ModulatedTexture.Render(0, 0, NULL);
+         SDL_Rect* pCurrentClip = &fg_aSpriteClips[iFrame / 4];
+         fg_SpriteSheetTexture.Render((SCREEN_WIDTH - pCurrentClip->w) / 2, (SCREEN_HEIGHT - pCurrentClip->h) / 2, pCurrentClip);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
+
+         ++iFrame;
+
+         if (iFrame / 4 >= fg_iWalkingAnimationFrames_c)
+            iFrame = 0;
       }
    }
 
@@ -153,7 +140,7 @@ bool Init()
       return false;
    }
 
-   fg_pRenderer = SDL_CreateRenderer(fg_pWindow, -1, SDL_RENDERER_ACCELERATED);
+   fg_pRenderer = SDL_CreateRenderer(fg_pWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
    if (fg_pRenderer == NULL)
    {
       printf("Renderer could not be created! SDL Error: %s\n", SDL_GetError());
@@ -176,26 +163,38 @@ bool Init()
 
 bool LoadMedia()
 {
-   if (!fg_ModulatedTexture.LoadFromFile("fadeout.png"))
+   if (!fg_SpriteSheetTexture.LoadFromFile("foo.png"))
    {
       printf("Failed to load front texture\n");
       return false;
    }
 
-   fg_ModulatedTexture.SetBlendMode(SDL_BLENDMODE_BLEND);
+   fg_aSpriteClips[0].x = 0;
+   fg_aSpriteClips[0].y = 0;
+   fg_aSpriteClips[0].w = 64;
+   fg_aSpriteClips[0].h = 205;
 
-   if (!fg_BackgroundTexture.LoadFromFile("fadein.png"))
-   {
-      printf("failed to load background texture\n");
-      return false;
-   }
+   fg_aSpriteClips[1].x = 64;
+   fg_aSpriteClips[1].y = 0;
+   fg_aSpriteClips[1].w = 64;
+   fg_aSpriteClips[1].h = 205;
+
+   fg_aSpriteClips[2].x = 128;
+   fg_aSpriteClips[2].y = 0;
+   fg_aSpriteClips[2].w = 64;
+   fg_aSpriteClips[2].h = 205;
+
+   fg_aSpriteClips[3].x = 196;
+   fg_aSpriteClips[3].y = 0;
+   fg_aSpriteClips[3].w = 64;
+   fg_aSpriteClips[3].h = 205;
 
    return true;
 }
 
 void Close()
 {
-   fg_ModulatedTexture.Free();
+   fg_SpriteSheetTexture.Free();
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
