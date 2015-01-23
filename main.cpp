@@ -3,13 +3,21 @@ and may not be redistributed without written permission.*/
 
 #include <SDL.h>
 #include <SDL_image.h>
-#include <SDL_ttf.h>
 #include <stdio.h>
 #include <string>
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+
+enum EButtonSprite
+{
+   EButtonSprite_MouseOut = 0,
+   EButtonSprite_MouseOverMotion = 1,
+   EButtonSprite_MouseDown = 2,
+   EButtonSprite_MouseUp = 3,
+   EButtonSprite_Total = 4
+};
 
 //Texture wrapper class
 class CTexture
@@ -20,7 +28,9 @@ public:
 
    bool LoadFromFile(std::string sPath);
 
+#ifdef _SDL_TTF_H
    bool LoadFromRenderedText(std::string sTextureText, SDL_Color vTextColor);
+#endif
 
    void Free();
 
@@ -42,17 +52,40 @@ private:
    int m_iHeight;
 };
 
+class CButton
+{
+public:
+   CButton();
+
+   void SetPosition(int iX, int iY);
+
+   void HandleEvent(SDL_Event* pE);
+
+   void Render();
+private:
+   SDL_Point m_Position;
+
+   // Currently used global sprite
+   EButtonSprite m_eCurrentSprite;
+};
+
 //The window we'll be rendering to
 SDL_Window* fg_pWindow = NULL;
 
 //The window renderer
 SDL_Renderer* fg_pRenderer = NULL;
 
-//Font
-TTF_Font* fg_pFont = NULL;
+//Button constants
+const int fg_iButtonWidth_c = 300;
+const int fg_iButtonHeight_c = 200;
+const int fg_iTotalButtons_c = 4;
 
 //Walking animation
-CTexture fg_TextTexture;
+CTexture fg_ButtonSpriteSheetTexture;
+SDL_Rect fg_aSpriteClips[EButtonSprite_Total];
+CButton fg_aButtons[fg_iTotalButtons_c];
+
+
 
 //Starts up SDL and creates a window
 bool Init();
@@ -103,12 +136,15 @@ int main( int argc, char* args[] )
             bQuit = true;
          }
 
+         for (int i = 0; i < fg_iTotalButtons_c; i++)
+            fg_aButtons[i].HandleEvent(&uEvent);
+
          //Clear screen
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_TextTexture.Render((SCREEN_WIDTH - fg_TextTexture.GetWidth()) / 2, (SCREEN_HEIGHT - fg_TextTexture.GetHeight()) / 2, 
-                                NULL, 0, NULL, SDL_FLIP_NONE);
+         for (int i = 0; i < fg_iTotalButtons_c; i++)
+            fg_aButtons[i].Render();
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -157,41 +193,37 @@ bool Init()
       return false;
    }
 
-   //Initialize SDL_ttf
-   if (TTF_Init() == -1)
-   {
-      printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
-      return false;
-   }
-
    return true;
 }
 
 bool LoadMedia()
 {
-   fg_pFont = TTF_OpenFont("lazy.ttf", 28);
-   if (fg_pFont == NULL)
-   {
-      printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
-      return false;
-   }
-
    SDL_Color vTextColor = { 0, 0, 0 };
-   if (!fg_TextTexture.LoadFromRenderedText("The quick brown fox jumps over the lazy dog", vTextColor))
+   if (!fg_ButtonSpriteSheetTexture.LoadFromFile("button.png"))
    {
       printf("Failed to render text texture\n");
       return false;
    }
+
+   for (int i = 0; i < EButtonSprite_Total; i++)
+   {
+      fg_aSpriteClips[i].x = 0;
+      fg_aSpriteClips[i].y = i * fg_iButtonHeight_c;
+      fg_aSpriteClips[i].w = fg_iButtonWidth_c;
+      fg_aSpriteClips[i].h = fg_iButtonHeight_c;
+   }
+
+   fg_aButtons[0].SetPosition(0, 0);
+   fg_aButtons[1].SetPosition(SCREEN_WIDTH - fg_iButtonWidth_c, 0);
+   fg_aButtons[2].SetPosition(0, SCREEN_HEIGHT - fg_iButtonHeight_c);
+   fg_aButtons[3].SetPosition(SCREEN_WIDTH - fg_iButtonWidth_c, SCREEN_HEIGHT - fg_iButtonHeight_c);
 
    return true;
 }
 
 void Close()
 {
-   fg_TextTexture.Free();
-
-   TTF_CloseFont(fg_pFont);
-   fg_pFont = NULL;
+   fg_ButtonSpriteSheetTexture.Free();
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
@@ -200,7 +232,6 @@ void Close()
    fg_pRenderer = NULL;
 
    //Quit SDL subsystems
-   TTF_Quit();
    IMG_Quit();
    SDL_Quit();
 }
@@ -250,6 +281,7 @@ bool CTexture::LoadFromFile(std::string sPath)
    return true;
 }
 
+#ifdef _SDL_TTF_H
 bool CTexture::LoadFromRenderedText(std::string sTextureText, SDL_Color vTextColor)
 {
    Free();
@@ -275,6 +307,7 @@ bool CTexture::LoadFromRenderedText(std::string sTextureText, SDL_Color vTextCol
 
    return true;
 }
+#endif
 
 void CTexture::Free()
 {
@@ -325,4 +358,64 @@ int CTexture::GetWidth()
 int CTexture::GetHeight()
 {
    return m_iHeight;
+}
+
+CButton::CButton()
+{
+   m_Position.x = 0;
+   m_Position.y = 0;
+
+   m_eCurrentSprite = EButtonSprite_MouseOut;
+}
+
+void CButton::SetPosition(int iX, int iY)
+{
+   m_Position.x = iX;
+   m_Position.y = iY;
+}
+
+void CButton::HandleEvent(SDL_Event* pE)
+{
+   //If the mouse event happened
+   if (pE->type == SDL_MOUSEMOTION || pE->type == SDL_MOUSEBUTTONDOWN || pE->type == SDL_MOUSEBUTTONUP)
+   {
+      int iX;
+      int iY;
+      SDL_GetMouseState(&iX, &iY);
+
+      // check if the mouse is in button
+      bool bInside = true;
+      if (iX < m_Position.x || /*left of*/
+             iX > m_Position.x + fg_iButtonWidth_c || /*right of*/
+             iY < m_Position.y || /*above*/
+             iY > m_Position.y + fg_iButtonWidth_c /*below*/)
+         bInside = false;
+
+      if (!bInside)
+      {
+         m_eCurrentSprite = EButtonSprite_MouseOut;
+         return;
+      }
+
+      switch(pE->type)
+      {
+      case SDL_MOUSEMOTION:
+         m_eCurrentSprite = EButtonSprite_MouseOverMotion;
+         break;
+
+      case SDL_MOUSEBUTTONDOWN:
+         m_eCurrentSprite = EButtonSprite_MouseDown;
+         break;
+
+      case SDL_MOUSEBUTTONUP:
+         m_eCurrentSprite = EButtonSprite_MouseUp;
+         break;
+      }
+
+   }
+}
+
+void CButton::Render()
+{
+   fg_ButtonSpriteSheetTexture.Render(m_Position.x, m_Position.y, &fg_aSpriteClips[m_eCurrentSprite], 0.0, NULL, SDL_FLIP_NONE);
 }
