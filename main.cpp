@@ -24,6 +24,10 @@ public:
 
    void SetColor(Uint8 iRed, Uint8 iGreen, Uint8 iBlue);
 
+   void SetBlendMode(SDL_BlendMode EBlending);
+
+   void SetAlpha(Uint8 iAlpha);
+
    void Render(int iX, int iY, SDL_Rect* pClip);
 
    int GetWidth();
@@ -44,6 +48,7 @@ SDL_Renderer* fg_pRenderer = NULL;
 
 //Scene sprites
 CTexture fg_ModulatedTexture;
+CTexture fg_BackgroundTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -79,9 +84,7 @@ int main( int argc, char* args[] )
    // Event handler
    SDL_Event uEvent;
 
-   Uint8 iR = 255;
-   Uint8 iG = 255;
-   Uint8 iB = 255;
+   Uint8 iA = 255;
 
    //While application is running
    while (!bQuit)
@@ -96,31 +99,19 @@ int main( int argc, char* args[] )
          }
          else if(uEvent.type == SDL_KEYDOWN)
          {
-            switch(uEvent.key.keysym.sym)
+            if (uEvent.key.keysym.sym == SDLK_w)
             {
-            case SDLK_q:
-               iR += 32;
-               break;
-
-            case SDLK_w:
-               iG += 32;
-               break;
-
-            case SDLK_e:
-               iB += 32;
-               break;
-
-            case SDLK_a:
-               iR -= 32;
-               break;
-
-            case SDLK_s:
-               iG -= 32;
-               break;
-
-            case SDLK_d:
-               iB -= 32;
-               break;
+               if (iA + 32 > 255)
+                  iA = 255;
+               else
+                  iA += 32;
+            }
+            else if (uEvent.key.keysym.sym == SDLK_s)
+            {
+               if (iA - 32 < 0)
+                  iA = 0;
+               else
+                  iA -= 32;
             }
          }
 
@@ -128,7 +119,9 @@ int main( int argc, char* args[] )
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_ModulatedTexture.SetColor(iR, iG, iB);
+         fg_BackgroundTexture.Render(0, 0, NULL);
+
+         fg_ModulatedTexture.SetAlpha(iA);
          fg_ModulatedTexture.Render(0, 0, NULL);
 
          //Update screen
@@ -183,9 +176,17 @@ bool Init()
 
 bool LoadMedia()
 {
-   if (!(fg_ModulatedTexture.LoadFromFile("colors.png")))
+   if (!fg_ModulatedTexture.LoadFromFile("fadeout.png"))
    {
-      printf("Failed to load sprit sheet\n");
+      printf("Failed to load front texture\n");
+      return false;
+   }
+
+   fg_ModulatedTexture.SetBlendMode(SDL_BLENDMODE_BLEND);
+
+   if (!fg_BackgroundTexture.LoadFromFile("fadein.png"))
+   {
+      printf("failed to load background texture\n");
       return false;
    }
 
@@ -270,6 +271,16 @@ void CTexture::Free()
 void CTexture::SetColor(Uint8 iRed, Uint8 iGreen, Uint8 iBlue)
 {
    SDL_SetTextureColorMod(m_pTexture, iRed, iGreen, iBlue);
+}
+
+void CTexture::SetBlendMode(SDL_BlendMode EBlending)
+{
+   SDL_SetTextureBlendMode(m_pTexture, EBlending);
+}
+
+void CTexture::SetAlpha(Uint8 iAlpha)
+{
+   SDL_SetTextureAlphaMod(m_pTexture, iAlpha);
 }
 
 void CTexture::Render(int iX, int iY, SDL_Rect* pClip)
