@@ -70,10 +70,27 @@ int main( int argc, char* args[] )
          }
 
          //Clear screen
+         SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         //Render texture to screen
-         SDL_RenderCopy(fg_pRenderer, fg_pTexture, NULL, NULL);
+         //Render red filled quad
+         SDL_Rect vFillRect = { SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+         SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0x00, 0x00, 0xFF);
+         SDL_RenderFillRect(fg_pRenderer, &vFillRect);
+
+         //Render green outlined quad
+         SDL_Rect vOutlineRect = { SCREEN_WIDTH / 6, SCREEN_HEIGHT / 6, SCREEN_WIDTH * 2 / 3, SCREEN_HEIGHT * 2 / 3 };
+         SDL_SetRenderDrawColor(fg_pRenderer, 0x00, 0xFF, 0x00, 0xFF);
+         SDL_RenderDrawRect(fg_pRenderer, &vOutlineRect);
+
+         //Draw blue horizontal line
+         SDL_SetRenderDrawColor(fg_pRenderer, 0x00, 0x00, 0xFF, 0xFF);
+         SDL_RenderDrawLine(fg_pRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2);
+
+         //Draw vertical line of yellow dots
+         SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0x00, 0xFF);
+         for (int i = 0; i < SCREEN_HEIGHT; i += 4)
+            SDL_RenderDrawPoint(fg_pRenderer, SCREEN_WIDTH / 2, i);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -127,14 +144,7 @@ bool Init()
 
 bool LoadMedia()
 {
-   // Load default surface
-   fg_pTexture = LoadTexture("texture.png");
-   if (fg_pTexture == NULL)
-   {
-      printf("Failed to load texture image!\n");
-      return false;
-   }
-
+   // Nothing to load
    return true;
 }
 
