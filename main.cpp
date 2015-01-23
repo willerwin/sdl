@@ -1,9 +1,9 @@
 /*This source code copyrighted by Lazy Foo' Productions (2004-2013)
 and may not be redistributed without written permission.*/
 
-//Using SDL, SDL_image, standard IO, and strings
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdio.h>
 #include <string>
 
@@ -19,6 +19,8 @@ public:
    ~CTexture();
 
    bool LoadFromFile(std::string sPath);
+
+   bool LoadFromRenderedText(std::string sTextureText, SDL_Color vTextColor);
 
    void Free();
 
@@ -46,8 +48,11 @@ SDL_Window* fg_pWindow = NULL;
 //The window renderer
 SDL_Renderer* fg_pRenderer = NULL;
 
+//Font
+TTF_Font* fg_pFont = NULL;
+
 //Walking animation
-CTexture fg_ArrowTexture;
+CTexture fg_TextTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -97,38 +102,13 @@ int main( int argc, char* args[] )
          {
             bQuit = true;
          }
-         else if (uEvent.type == SDL_KEYDOWN)
-         {
-            switch(uEvent.key.keysym.sym)
-            {
-            case SDLK_a:
-               dDegrees -= 60;
-               break;
-
-            case SDLK_d:
-               dDegrees += 60;
-               break;
-
-            case SDLK_q:
-               eFlipType = SDL_FLIP_HORIZONTAL;
-               break;
-
-            case SDLK_w:
-               eFlipType = SDL_FLIP_NONE;
-               break;
-
-            case SDLK_e:
-               eFlipType = SDL_FLIP_VERTICAL;
-               break;
-            }
-         }
 
          //Clear screen
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_ArrowTexture.Render((SCREEN_WIDTH - fg_ArrowTexture.GetWidth()) / 2, (SCREEN_HEIGHT - fg_ArrowTexture.GetHeight()) / 2, 
-                                NULL, dDegrees, NULL, eFlipType);
+         fg_TextTexture.Render((SCREEN_WIDTH - fg_TextTexture.GetWidth()) / 2, (SCREEN_HEIGHT - fg_TextTexture.GetHeight()) / 2, 
+                                NULL, 0, NULL, SDL_FLIP_NONE);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -177,14 +157,29 @@ bool Init()
       return false;
    }
 
+   //Initialize SDL_ttf
+   if (TTF_Init() == -1)
+   {
+      printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+      return false;
+   }
+
    return true;
 }
 
 bool LoadMedia()
 {
-   if (!fg_ArrowTexture.LoadFromFile("arrow.png"))
+   fg_pFont = TTF_OpenFont("lazy.ttf", 28);
+   if (fg_pFont == NULL)
    {
-      printf("Failed to load front texture\n");
+      printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+      return false;
+   }
+
+   SDL_Color vTextColor = { 0, 0, 0 };
+   if (!fg_TextTexture.LoadFromRenderedText("The quick brown fox jumps over the lazy dog", vTextColor))
+   {
+      printf("Failed to render text texture\n");
       return false;
    }
 
@@ -193,7 +188,10 @@ bool LoadMedia()
 
 void Close()
 {
-   fg_ArrowTexture.Free();
+   fg_TextTexture.Free();
+
+   TTF_CloseFont(fg_pFont);
+   fg_pFont = NULL;
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
@@ -202,6 +200,7 @@ void Close()
    fg_pRenderer = NULL;
 
    //Quit SDL subsystems
+   TTF_Quit();
    IMG_Quit();
    SDL_Quit();
 }
@@ -223,9 +222,6 @@ bool CTexture::LoadFromFile(std::string sPath)
    // Get rid of preexisting texture
    Free();
 
-   //The final texture
-   SDL_Texture* pNewTexture = NULL;
-
    //Load image at specified path
    SDL_Surface* pLoadedSurface = IMG_Load(sPath.c_str());
    if (pLoadedSurface == NULL)
@@ -238,8 +234,8 @@ bool CTexture::LoadFromFile(std::string sPath)
    SDL_SetColorKey(pLoadedSurface, SDL_TRUE, SDL_MapRGB(pLoadedSurface->format, 0, 0xFF, 0xFF));
 
    //Create texture from surface pixels
-   pNewTexture = SDL_CreateTextureFromSurface(fg_pRenderer, pLoadedSurface);
-   if (pNewTexture == NULL)
+   m_pTexture = SDL_CreateTextureFromSurface(fg_pRenderer, pLoadedSurface);
+   if (m_pTexture == NULL)
    {
       printf("Unable to create texture from %s! SDL Error: %s\n", sPath.c_str(), SDL_GetError());
       return false;
@@ -251,7 +247,32 @@ bool CTexture::LoadFromFile(std::string sPath)
    //Get rid of old loaded surface
    SDL_FreeSurface(pLoadedSurface);
 
-   m_pTexture = pNewTexture;
+   return true;
+}
+
+bool CTexture::LoadFromRenderedText(std::string sTextureText, SDL_Color vTextColor)
+{
+   Free();
+
+   SDL_Surface* pTextSurface = TTF_RenderText_Solid(fg_pFont, sTextureText.c_str(), vTextColor);
+   if (pTextSurface == NULL)
+   {
+      printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+      return false;
+   }
+
+   m_pTexture = SDL_CreateTextureFromSurface(fg_pRenderer, pTextSurface);
+   if (m_pTexture == NULL)
+   {
+      printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
+      return false;
+   }
+
+   m_iWidth = pTextSurface->w;
+   m_iHeight = pTextSurface->h;
+
+   SDL_FreeSurface(pTextSurface);
+
    return true;
 }
 

@@ -58,7 +58,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL2.lib SDL2main.lib SDL2_image.lib"
+				AdditionalDependencies="SDL2.lib SDL2main.lib SDL2_image.lib SDL2_ttf.lib"
 				AdditionalLibraryDirectories="T:\devlib\lib\x86\"
 				GenerateDebugInformation="true"
 				SubSystem="1"
