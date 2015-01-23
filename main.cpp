@@ -1,8 +1,9 @@
 /*This source code copyrighted by Lazy Foo' Productions (2004-2013)
 and may not be redistributed without written permission.*/
 
-//Using SDL and standard IO
+//Using SDL, SDL_image, standard IO, and strings
 #include <SDL.h>
+#include <SDL_image.h>
 #include <stdio.h>
 #include <string>
 
@@ -102,6 +103,14 @@ bool Init()
       return false;
    }
 
+   //Initialize PNG loading
+   int iImgFlags = IMG_INIT_PNG;
+   if (!(IMG_Init(iImgFlags) & iImgFlags))
+   {
+      printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+      return false;
+   }
+
    //Get window surface
    fg_pScreenSurface = SDL_GetWindowSurface(fg_pWindow);
 
@@ -111,7 +120,7 @@ bool Init()
 bool LoadMedia()
 {
    // Load default surface
-   fg_pCurrentSurface = LoadSurface("stretch.bmp");
+   fg_pCurrentSurface = LoadSurface("loaded.png");
    if (fg_pCurrentSurface == NULL)
    {
       printf("Failed to load stretching image!\n");
@@ -141,9 +150,9 @@ SDL_Surface* LoadSurface(std::string sPath)
    SDL_Surface* pOptimizedSurface = NULL;
 
    //Load image at specified path
-   SDL_Surface* pLoadedSurface = SDL_LoadBMP(sPath.c_str());
+   SDL_Surface* pLoadedSurface = IMG_Load(sPath.c_str());
    if (pLoadedSurface == NULL)
-      printf("Unable to load image %s! SDL Error: %s\n", sPath.c_str(), SDL_GetError());
+      printf("Unable to load image %s! SDL Error: %s\n", sPath.c_str(), IMG_GetError());
    else
    {
       //Convert surface to screen format
