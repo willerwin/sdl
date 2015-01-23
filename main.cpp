@@ -73,24 +73,39 @@ int main( int argc, char* args[] )
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         //Render red filled quad
-         SDL_Rect vFillRect = { SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
-         SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0x00, 0x00, 0xFF);
-         SDL_RenderFillRect(fg_pRenderer, &vFillRect);
+         //Top left corner viewport
+         SDL_Rect vTopLeftViewport;
+         vTopLeftViewport.x = 0;
+         vTopLeftViewport.y = 0;
+         vTopLeftViewport.w = SCREEN_WIDTH / 2;
+         vTopLeftViewport.h = SCREEN_HEIGHT / 2;
+         SDL_RenderSetViewport(fg_pRenderer, &vTopLeftViewport);
 
-         //Render green outlined quad
-         SDL_Rect vOutlineRect = { SCREEN_WIDTH / 6, SCREEN_HEIGHT / 6, SCREEN_WIDTH * 2 / 3, SCREEN_HEIGHT * 2 / 3 };
-         SDL_SetRenderDrawColor(fg_pRenderer, 0x00, 0xFF, 0x00, 0xFF);
-         SDL_RenderDrawRect(fg_pRenderer, &vOutlineRect);
+         //Render texture to screen
+         SDL_RenderCopy(fg_pRenderer, fg_pTexture, NULL, NULL);
 
-         //Draw blue horizontal line
-         SDL_SetRenderDrawColor(fg_pRenderer, 0x00, 0x00, 0xFF, 0xFF);
-         SDL_RenderDrawLine(fg_pRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2);
+         //Top right corner viewport
+         SDL_Rect vTopRightViewport;
+         vTopRightViewport.x = SCREEN_WIDTH / 2;
+         vTopRightViewport.y = 0;
+         vTopRightViewport.w = SCREEN_WIDTH / 2;
+         vTopRightViewport.h = SCREEN_HEIGHT / 2;
+         SDL_RenderSetViewport(fg_pRenderer, &vTopRightViewport);
 
-         //Draw vertical line of yellow dots
-         SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0x00, 0xFF);
-         for (int i = 0; i < SCREEN_HEIGHT; i += 4)
-            SDL_RenderDrawPoint(fg_pRenderer, SCREEN_WIDTH / 2, i);
+         //Render texture to screen
+         SDL_RenderCopy(fg_pRenderer, fg_pTexture, NULL, NULL);
+         
+
+         //Bottom viewport
+         SDL_Rect vBottomViewport;
+         vBottomViewport.x = 0;
+         vBottomViewport.y = SCREEN_HEIGHT / 2;
+         vBottomViewport.w = SCREEN_WIDTH;
+         vBottomViewport.h = SCREEN_HEIGHT / 2;
+         SDL_RenderSetViewport(fg_pRenderer, &vBottomViewport);
+
+         //Render texture to screen
+         SDL_RenderCopy(fg_pRenderer, fg_pTexture, NULL, NULL);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -144,6 +159,12 @@ bool Init()
 
 bool LoadMedia()
 {
+   fg_pTexture = LoadTexture("viewport.png");
+   if (fg_pTexture == NULL)
+   {
+      printf("Failed to load texture!\n");
+      return false;
+   }
    // Nothing to load
    return true;
 }
