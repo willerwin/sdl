@@ -28,7 +28,7 @@ public:
 
    void SetAlpha(Uint8 iAlpha);
 
-   void Render(int iX, int iY, SDL_Rect* pClip);
+   void Render(int iX, int iY, SDL_Rect* pClip, double dAngle, SDL_Point* pCenter, SDL_RendererFlip eFlip);
 
    int GetWidth();
    int GetHeight();
@@ -47,9 +47,7 @@ SDL_Window* fg_pWindow = NULL;
 SDL_Renderer* fg_pRenderer = NULL;
 
 //Walking animation
-const int fg_iWalkingAnimationFrames_c = 4;
-SDL_Rect fg_aSpriteClips[fg_iWalkingAnimationFrames_c];
-CTexture fg_SpriteSheetTexture;
+CTexture fg_ArrowTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -85,7 +83,8 @@ int main( int argc, char* args[] )
    // Event handler
    SDL_Event uEvent;
 
-   int iFrame = 0;
+   double dDegrees = 0;
+   SDL_RendererFlip eFlipType = SDL_FLIP_NONE;
 
    //While application is running
    while (!bQuit)
@@ -98,21 +97,41 @@ int main( int argc, char* args[] )
          {
             bQuit = true;
          }
+         else if (uEvent.type == SDL_KEYDOWN)
+         {
+            switch(uEvent.key.keysym.sym)
+            {
+            case SDLK_a:
+               dDegrees -= 60;
+               break;
+
+            case SDLK_d:
+               dDegrees += 60;
+               break;
+
+            case SDLK_q:
+               eFlipType = SDL_FLIP_HORIZONTAL;
+               break;
+
+            case SDLK_w:
+               eFlipType = SDL_FLIP_NONE;
+               break;
+
+            case SDLK_e:
+               eFlipType = SDL_FLIP_VERTICAL;
+               break;
+            }
+         }
 
          //Clear screen
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         SDL_Rect* pCurrentClip = &fg_aSpriteClips[iFrame / 4];
-         fg_SpriteSheetTexture.Render((SCREEN_WIDTH - pCurrentClip->w) / 2, (SCREEN_HEIGHT - pCurrentClip->h) / 2, pCurrentClip);
+         fg_ArrowTexture.Render((SCREEN_WIDTH - fg_ArrowTexture.GetWidth()) / 2, (SCREEN_HEIGHT - fg_ArrowTexture.GetHeight()) / 2, 
+                                NULL, dDegrees, NULL, eFlipType);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
-
-         ++iFrame;
-
-         if (iFrame / 4 >= fg_iWalkingAnimationFrames_c)
-            iFrame = 0;
       }
    }
 
@@ -163,38 +182,18 @@ bool Init()
 
 bool LoadMedia()
 {
-   if (!fg_SpriteSheetTexture.LoadFromFile("foo.png"))
+   if (!fg_ArrowTexture.LoadFromFile("arrow.png"))
    {
       printf("Failed to load front texture\n");
       return false;
    }
-
-   fg_aSpriteClips[0].x = 0;
-   fg_aSpriteClips[0].y = 0;
-   fg_aSpriteClips[0].w = 64;
-   fg_aSpriteClips[0].h = 205;
-
-   fg_aSpriteClips[1].x = 64;
-   fg_aSpriteClips[1].y = 0;
-   fg_aSpriteClips[1].w = 64;
-   fg_aSpriteClips[1].h = 205;
-
-   fg_aSpriteClips[2].x = 128;
-   fg_aSpriteClips[2].y = 0;
-   fg_aSpriteClips[2].w = 64;
-   fg_aSpriteClips[2].h = 205;
-
-   fg_aSpriteClips[3].x = 196;
-   fg_aSpriteClips[3].y = 0;
-   fg_aSpriteClips[3].w = 64;
-   fg_aSpriteClips[3].h = 205;
 
    return true;
 }
 
 void Close()
 {
-   fg_SpriteSheetTexture.Free();
+   fg_ArrowTexture.Free();
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
@@ -282,7 +281,7 @@ void CTexture::SetAlpha(Uint8 iAlpha)
    SDL_SetTextureAlphaMod(m_pTexture, iAlpha);
 }
 
-void CTexture::Render(int iX, int iY, SDL_Rect* pClip)
+void CTexture::Render(int iX, int iY, SDL_Rect* pClip, double dAngle, SDL_Point* pCenter, SDL_RendererFlip eFlip)
 {
    // Set rendering space and render to screen
    SDL_Rect vRenderQuad = { iX, iY, m_iWidth, m_iHeight };
@@ -294,7 +293,7 @@ void CTexture::Render(int iX, int iY, SDL_Rect* pClip)
       vRenderQuad.h = pClip->h;
    }
 
-   SDL_RenderCopy(fg_pRenderer, m_pTexture, pClip, &vRenderQuad);
+   SDL_RenderCopyEx(fg_pRenderer, m_pTexture, pClip, &vRenderQuad, dAngle, pCenter, eFlip);
 }
 
 int CTexture::GetWidth()
