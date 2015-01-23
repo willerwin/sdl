@@ -22,6 +22,8 @@ public:
 
    void Free();
 
+   void SetColor(Uint8 iRed, Uint8 iGreen, Uint8 iBlue);
+
    void Render(int iX, int iY, SDL_Rect* pClip);
 
    int GetWidth();
@@ -41,8 +43,7 @@ SDL_Window* fg_pWindow = NULL;
 SDL_Renderer* fg_pRenderer = NULL;
 
 //Scene sprites
-SDL_Rect fg_aSpriteClips[4];
-CTexture fg_SpriteSheetTexture;
+CTexture fg_ModulatedTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -78,6 +79,10 @@ int main( int argc, char* args[] )
    // Event handler
    SDL_Event uEvent;
 
+   Uint8 iR = 255;
+   Uint8 iG = 255;
+   Uint8 iB = 255;
+
    //While application is running
    while (!bQuit)
    {
@@ -89,15 +94,42 @@ int main( int argc, char* args[] )
          {
             bQuit = true;
          }
+         else if(uEvent.type == SDL_KEYDOWN)
+         {
+            switch(uEvent.key.keysym.sym)
+            {
+            case SDLK_q:
+               iR += 32;
+               break;
+
+            case SDLK_w:
+               iG += 32;
+               break;
+
+            case SDLK_e:
+               iB += 32;
+               break;
+
+            case SDLK_a:
+               iR -= 32;
+               break;
+
+            case SDLK_s:
+               iG -= 32;
+               break;
+
+            case SDLK_d:
+               iB -= 32;
+               break;
+            }
+         }
 
          //Clear screen
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_SpriteSheetTexture.Render(0, 0, &fg_aSpriteClips[0]);
-         fg_SpriteSheetTexture.Render(SCREEN_WIDTH - fg_aSpriteClips[1].w, 0, &fg_aSpriteClips[1]);
-         fg_SpriteSheetTexture.Render(0, SCREEN_HEIGHT - fg_aSpriteClips[2].h, &fg_aSpriteClips[2]);
-         fg_SpriteSheetTexture.Render(SCREEN_WIDTH - fg_aSpriteClips[3].w, SCREEN_HEIGHT - fg_aSpriteClips[3].h, &fg_aSpriteClips[3]);
+         fg_ModulatedTexture.SetColor(iR, iG, iB);
+         fg_ModulatedTexture.Render(0, 0, NULL);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -151,42 +183,18 @@ bool Init()
 
 bool LoadMedia()
 {
-   if (!(fg_SpriteSheetTexture.LoadFromFile("dots.png")))
+   if (!(fg_ModulatedTexture.LoadFromFile("colors.png")))
    {
       printf("Failed to load sprit sheet\n");
       return false;
    }
-
-   //Set top left sprite
-   fg_aSpriteClips[0].x = 0;
-   fg_aSpriteClips[0].y = 0;
-   fg_aSpriteClips[0].w = 100;
-   fg_aSpriteClips[0].h = 100;
-
-   //Set top right sprite
-   fg_aSpriteClips[1].x = 100;
-   fg_aSpriteClips[1].y = 0;
-   fg_aSpriteClips[1].w = 100;
-   fg_aSpriteClips[1].h = 100;
-
-   //Set top left sprite
-   fg_aSpriteClips[2].x = 0;
-   fg_aSpriteClips[2].y = 100;
-   fg_aSpriteClips[2].w = 100;
-   fg_aSpriteClips[2].h = 100;
-
-   //Set top left sprite
-   fg_aSpriteClips[3].x = 100;
-   fg_aSpriteClips[3].y = 100;
-   fg_aSpriteClips[3].w = 100;
-   fg_aSpriteClips[3].h = 100;
 
    return true;
 }
 
 void Close()
 {
-   fg_SpriteSheetTexture.Free();
+   fg_ModulatedTexture.Free();
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
@@ -257,6 +265,11 @@ void CTexture::Free()
       m_iWidth = 0;
       m_iHeight = 0;
    }
+}
+
+void CTexture::SetColor(Uint8 iRed, Uint8 iGreen, Uint8 iBlue)
+{
+   SDL_SetTextureColorMod(m_pTexture, iRed, iGreen, iBlue);
 }
 
 void CTexture::Render(int iX, int iY, SDL_Rect* pClip)
