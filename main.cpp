@@ -22,7 +22,7 @@ public:
 
    void Free();
 
-   void Render(int iX, int iY);
+   void Render(int iX, int iY, SDL_Rect* pClip);
 
    int GetWidth();
    int GetHeight();
@@ -40,9 +40,9 @@ SDL_Window* fg_pWindow = NULL;
 //The window renderer
 SDL_Renderer* fg_pRenderer = NULL;
 
-//Scene textures
-CTexture fg_FooTexture;
-CTexture fg_BackgroundTexture;
+//Scene sprites
+SDL_Rect fg_aSpriteClips[4];
+CTexture fg_SpriteSheetTexture;
 
 //Starts up SDL and creates a window
 bool Init();
@@ -94,8 +94,10 @@ int main( int argc, char* args[] )
          SDL_SetRenderDrawColor(fg_pRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
          SDL_RenderClear(fg_pRenderer);
 
-         fg_BackgroundTexture.Render(0, 0);
-         fg_FooTexture.Render(240, 190);
+         fg_SpriteSheetTexture.Render(0, 0, &fg_aSpriteClips[0]);
+         fg_SpriteSheetTexture.Render(SCREEN_WIDTH - fg_aSpriteClips[1].w, 0, &fg_aSpriteClips[1]);
+         fg_SpriteSheetTexture.Render(0, SCREEN_HEIGHT - fg_aSpriteClips[2].h, &fg_aSpriteClips[2]);
+         fg_SpriteSheetTexture.Render(SCREEN_WIDTH - fg_aSpriteClips[3].w, SCREEN_HEIGHT - fg_aSpriteClips[3].h, &fg_aSpriteClips[3]);
 
          //Update screen
          SDL_RenderPresent(fg_pRenderer);
@@ -149,25 +151,42 @@ bool Init()
 
 bool LoadMedia()
 {
-   if (!(fg_FooTexture.LoadFromFile("foo.png")))
+   if (!(fg_SpriteSheetTexture.LoadFromFile("dots.png")))
    {
-      printf("Failed to load Foo\n");
+      printf("Failed to load sprit sheet\n");
       return false;
    }
 
-   if (!(fg_BackgroundTexture.LoadFromFile("background.png")))
-   {
-      printf("Failed to load background\n");
-      return false;
-   }
+   //Set top left sprite
+   fg_aSpriteClips[0].x = 0;
+   fg_aSpriteClips[0].y = 0;
+   fg_aSpriteClips[0].w = 100;
+   fg_aSpriteClips[0].h = 100;
+
+   //Set top right sprite
+   fg_aSpriteClips[1].x = 100;
+   fg_aSpriteClips[1].y = 0;
+   fg_aSpriteClips[1].w = 100;
+   fg_aSpriteClips[1].h = 100;
+
+   //Set top left sprite
+   fg_aSpriteClips[2].x = 0;
+   fg_aSpriteClips[2].y = 100;
+   fg_aSpriteClips[2].w = 100;
+   fg_aSpriteClips[2].h = 100;
+
+   //Set top left sprite
+   fg_aSpriteClips[3].x = 100;
+   fg_aSpriteClips[3].y = 100;
+   fg_aSpriteClips[3].w = 100;
+   fg_aSpriteClips[3].h = 100;
 
    return true;
 }
 
 void Close()
 {
-   fg_FooTexture.Free();
-   fg_BackgroundTexture.Free();
+   fg_SpriteSheetTexture.Free();
 
    //Destroy window
    SDL_DestroyRenderer(fg_pRenderer);
@@ -178,31 +197,6 @@ void Close()
    //Quit SDL subsystems
    IMG_Quit();
    SDL_Quit();
-}
-
-SDL_Texture* LoadTexture(std::string sPath)
-{
-   //The final texture
-   SDL_Texture* pNewTexture = NULL;
-
-   //Load image at specified path
-   SDL_Surface* pLoadedSurface = IMG_Load(sPath.c_str());
-   if (pLoadedSurface == NULL)
-   {
-      printf("Unable to load image %s! SDL_image Error: %s\n", sPath.c_str(), IMG_GetError());
-   }
-   else
-   {
-      //Create texture from surface pixels
-      pNewTexture = SDL_CreateTextureFromSurface(fg_pRenderer, pLoadedSurface);
-      if (pNewTexture == NULL)
-         printf("Unable to create texture from %s! SDL Error: %s\n", sPath.c_str(), SDL_GetError());
-
-      //Get rid of old loaded surface
-      SDL_FreeSurface(pLoadedSurface);
-   }
-
-   return pNewTexture;
 }
 
 CTexture::CTexture()
@@ -265,11 +259,19 @@ void CTexture::Free()
    }
 }
 
-void CTexture::Render(int iX, int iY)
+void CTexture::Render(int iX, int iY, SDL_Rect* pClip)
 {
    // Set rendering space and render to screen
    SDL_Rect vRenderQuad = { iX, iY, m_iWidth, m_iHeight };
-   SDL_RenderCopy(fg_pRenderer, m_pTexture, NULL, &vRenderQuad);
+
+   // Set slip rendering dimensions
+   if (pClip != NULL)
+   {
+      vRenderQuad.w = pClip->w;
+      vRenderQuad.h = pClip->h;
+   }
+
+   SDL_RenderCopy(fg_pRenderer, m_pTexture, pClip, &vRenderQuad);
 }
 
 int CTexture::GetWidth()
